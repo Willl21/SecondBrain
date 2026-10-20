@@ -26,13 +26,22 @@ export async function embed(
   return data.embedding.values;
 }
 
+export type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
+
 // Coba model satu per satu; pindah ke berikutnya cuma kalau kena limit (429) atau overload (503).
-export async function chat(key: string, models: string[], system: string, prompt: string): Promise<string> {
+export async function chat(
+  key: string,
+  models: string[],
+  system: string,
+  prompt: string | Part[],
+  generationConfig?: object,
+): Promise<string> {
   let last = "";
   for (const model of models) {
     const res = await call(key, model, "generateContent", {
       systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{ role: "user", parts: typeof prompt === "string" ? [{ text: prompt }] : prompt }],
+      generationConfig,
     });
     if (res.status === 429 || res.status === 503) {
       last = `${model} ${res.status}`;

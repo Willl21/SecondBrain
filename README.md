@@ -7,7 +7,8 @@ Catatan pribadi + tanya jawab AI ke catatan sendiri (RAG). PWA, bisa di-install 
 ## Cara kerja
 1. Catatan disimpan di D1, lalu di-embed (Gemini Embedding) dan vektornya disimpan di Vectorize.
 2. Pertanyaan di-embed, 5 catatan paling mirip diambil, lalu dikirim ke Gemini Flash Lite sebagai konteks.
-3. Kalau model pertama kena limit (429), otomatis pindah ke model berikutnya di `CHAT_MODELS`.
+3. **Import file** (PDF, gambar, PPTX, DOCX, TXT/MD): AI memilih poin penting jadi beberapa catatan pendek, user review dulu sebelum disimpan. PDF & gambar dibaca langsung oleh Gemini; PPTX/DOCX diambil teksnya di browser.
+4. Kalau model pertama kena limit (429), otomatis pindah ke model berikutnya di `CHAT_MODELS`.
 
 ## Setup
 ```bash
@@ -24,7 +25,7 @@ Isi `.dev.vars` (`GEMINI_API_KEY`, `APP_TOKEN`), lalu cek ID model di `wrangler.
 ```bash
 npm run dev      # API lokal di :8787 (Vectorize tetap pakai index asli di Cloudflare)
 npm run dev:web  # frontend (Vite) di terminal lain, /api di-proxy ke :8787
-npm test         # test fallback model
+npm test         # test fallback model + parser PPTX/DOCX
 npm run check    # type check backend + frontend
 ```
 

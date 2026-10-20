@@ -1,9 +1,10 @@
 # Progress — Second Brain
 
-_Terakhir diupdate: 2026-10-19_
+_Terakhir diupdate: 2026-10-20_
 
 ## Status
 - MVP jadi: catatan (CRUD), tanya ke catatan (RAG), PWA, login pakai `APP_TOKEN`.
+- 20 Okt: frontend pindah ke React + TSX (Vite, `web/`), ikon PNG logo Berserk, fitur Import file (`/api/extract`, review dulu sebelum simpan). Dites lokal (teks + PDF), BELUM di-deploy.
 - Live: https://second-brain.apaya357.workers.dev (Worker dikunci di region `gcp:us-central1`, jalan di Omaha/OMA).
 - D1 `second-brain` (id `278b2ff4-…`) + Vectorize `second-brain` (768 dim, cosine) sudah dibuat, schema sudah di-apply ke remote.
 - Secrets `APP_TOKEN` & `GEMINI_API_KEY` sudah di-set di Cloudflare.
@@ -33,4 +34,5 @@ _Terakhir diupdate: 2026-10-19_
 ## Belum dikerjakan
 - Domain sendiri (biar nggak kena blokir ISP + aman ditaruh di CV).
 - `APP_TOKEN` production → ganti ke string acak panjang kalau belum.
-- Chunking catatan panjang, push notif / service worker.
+- Chunking catatan panjang yang ditulis manual (import file sudah otomatis dipecah), push notif / service worker.
+- Import: file > ~10 MB belum didukung (base64 lewat JSON); kalau kena CPU limit Worker, pindah ke Gemini File API.

@@ -1,5 +1,26 @@
-import { chat, embed } from "./gemini.ts";
-import type { Note, Source } from "./types.ts";
+import { chat, embed, type Part } from "./gemini.ts";
+import type { Draft, Note, Source } from "./types.ts";
+
+// Format yang bisa dibaca Gemini langsung. PPTX/DOCX/TXT diubah jadi teks di browser.
+const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"];
+
+const EXTRACT_PROMPT =
+  "Kamu memilah dokumen jadi catatan second brain. Ambil HANYA yang layak diingat jangka panjang: konsep, definisi, " +
+  "fakta, rumus, keputusan, langkah penting. Buang basa-basi, daftar isi, slide judul, header/footer, dan pengulangan. " +
+  "Tiap catatan satu ide, bisa dipahami tanpa dokumen aslinya, judul singkat, isi padat. Pakai bahasa dokumen. " +
+  "Maksimal 15 catatan. Kalau nggak ada yang penting, kembalikan array kosong.";
+
+const DRAFTS_SCHEMA = {
+  responseMimeType: "application/json",
+  responseSchema: {
+    type: "ARRAY",
+    items: {
+      type: "OBJECT",
+      properties: { title: { type: "STRING" }, body: { type: "STRING" } },
+      required: ["title", "body"],
+    },
+  },
+};
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
@@ -78,6 +99,29 @@ export default {
         let ok = 0;
         for (const n of results) if (await index(env, n)) ok++;
         return json({ reindexed: ok, failed: results.length - ok });
+      }
+
+      // File -> usulan catatan. Belum disimpan; user pilih dulu, lalu frontend POST /api/notes satu per satu.
+      if (resource === "extract" && req.method === "POST") {
+        const { name, text, file, mimeType } = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+        let parts: Part[];
+        if (typeof text === "string" && text.trim()) parts = [{ text: text.slice(0, 200_000) }];
+        // ponytail: file base64 lewat JSON, maks ~10 MB. Kalau CPU limit Worker kena, pindah ke Gemini File API.
+        else if (typeof file === "string" && file.length <= 14_000_000 && FILE_TYPES.includes(String(mimeType)))
+          parts = [{ inlineData: { mimeType: String(mimeType), data: file } }];
+        else return json({ error: "File kosong, kegedean, atau formatnya nggak didukung" }, 400);
+
+        const out = await chat(
+          env.GEMINI_API_KEY,
+          env.CHAT_MODELS.split(","),
+          EXTRACT_PROMPT,
+          [{ text: `Nama file: ${String(name ?? "").slice(0, 200)}` }, ...parts],
+          DRAFTS_SCHEMA,
+        );
+        const drafts = (JSON.parse(out) as Draft[])
+          .filter((d) => typeof d?.title === "string" && typeof d?.body === "string" && d.body.trim())
+          .slice(0, 15);
+        return json({ drafts });
       }
 
       if (resource === "ask" && req.method === "POST") {

@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import type { Note, Source } from "../src/types.ts";
+import { Import } from "./Import.tsx";
 import "./style.css";
 
 function savedToken(): string {
@@ -144,6 +145,8 @@ function App() {
           </div>
           <p className="muted" aria-live="polite">{status}</p>
         </form>
+
+        <Import api={api} onSaved={load} />
 
         <h2>
           Catatan{" "}
