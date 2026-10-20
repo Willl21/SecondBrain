@@ -1,4 +1,4 @@
-import { chat, embed, type Part } from "./gemini.ts";
+import { chat, embed, embedMany, type Part } from "./gemini.ts";
 import type { Draft, Note, Source } from "./types.ts";
 
 // Format yang bisa dibaca Gemini langsung. PPTX/DOCX/TXT diubah jadi teks di browser.
@@ -44,6 +44,25 @@ async function index(env: Env, note: Pick<Note, "id" | "title" | "body">): Promi
     console.error("index gagal", note.id, e);
     return false;
   }
+}
+
+// Diukur 20 Okt (gemini-embedding-2): isi sama beda kalimat ±0.90, topik dekat tapi beda ±0.74.
+// Naikkan kalau catatan beda ikut ketandai, turunkan kalau dobel lolos.
+const SIMILAR = 0.85;
+
+// Tandai usulan yang mirip catatan lama, biar import file yang sama dua kali nggak bikin dobel.
+async function markSimilar(env: Env, drafts: Draft[]): Promise<Draft[]> {
+  if (!drafts.length) return drafts;
+  const vectors = await embedMany(env.GEMINI_API_KEY, env.EMBED_MODEL, drafts.map((d) => `${d.title}\n\n${d.body}`), "RETRIEVAL_DOCUMENT");
+  const best = await Promise.all(vectors.map(async (v) => (await env.VECTORS.query(v, { topK: 1 })).matches[0]));
+  const ids = best.filter((m) => m && m.score >= SIMILAR).map((m) => Number(m.id));
+  if (!ids.length) return drafts;
+  const { results } = await env.DB.prepare(`SELECT id, title FROM notes WHERE id IN (${ids.map(() => "?").join(",")})`)
+    .bind(...ids).all<Source>();
+  return drafts.map((d, i) => {
+    const similar = results.find((n) => String(n.id) === best[i]?.id && best[i].score >= SIMILAR);
+    return similar ? { ...d, similar } : d;
+  });
 }
 
 async function readNote(req: Request): Promise<{ title: string; body: string } | null> {
@@ -121,7 +140,8 @@ export default {
         const drafts = (JSON.parse(out) as Draft[])
           .filter((d) => typeof d?.title === "string" && typeof d?.body === "string" && d.body.trim())
           .slice(0, 15);
-        return json({ drafts });
+        // Cek dobel itu bonus; kalau gagal (mis. limit embedding), usulan tetap dikirim tanpa tanda.
+        return json({ drafts: await markSimilar(env, drafts).catch((e) => (console.error("markSimilar", e), drafts)) });
       }
 
       if (resource === "ask" && req.method === "POST") {

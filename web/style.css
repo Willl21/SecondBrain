@@ -31,5 +31,6 @@ button:disabled { opacity: 0.5; }
 .note strong { display: block; }
 input[type="checkbox"] { width: 20px; height: 20px; padding: 0; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
 .draft { display: flex; gap: 10px; margin-bottom: 8px; cursor: pointer; }
+.draft .similar { display: block; color: var(--accent); font-size: 0.8125rem; font-weight: 600; }
 .draft p { margin: 4px 0 0; color: var(--muted); font-size: 0.875rem; white-space: pre-wrap; }
 .note p { margin: 4px 0 0; color: var(--muted); font-size: 0.875rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

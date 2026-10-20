@@ -45,8 +45,13 @@ export function Import({ api, onSaved }: { api: Api; onSaved: () => Promise<void
     try {
       const body = JSON.stringify({ name: file.name, ...(await payload(file)) });
       const r = await api<{ drafts: Draft[] }>("/api/extract", { method: "POST", body });
-      setDrafts(r.drafts.map((d) => ({ ...d, keep: true })));
-      setStatus(r.drafts.length ? "Buang yang nggak perlu, lalu simpan." : "AI nggak nemu yang penting di file ini.");
+      setDrafts(r.drafts.map((d) => ({ ...d, keep: !d.similar })));
+      const dupes = r.drafts.filter((d) => d.similar).length;
+      setStatus(
+        !r.drafts.length ? "AI nggak nemu yang penting di file ini."
+        : dupes ? `${dupes} usulan mirip catatan lama, sengaja nggak dicentang. Cek dulu, lalu simpan.`
+        : "Buang yang nggak perlu, lalu simpan.",
+      );
     } catch (err) {
       setStatus((err as Error).message);
     } finally {
@@ -94,6 +99,7 @@ export function Import({ api, onSaved }: { api: Api; onSaved: () => Promise<void
               />
               <span>
                 <strong>{d.title}</strong>
+                {d.similar && <small className="similar">Mirip catatan #{d.similar.id} {d.similar.title || "Tanpa judul"}</small>}
                 <p>{d.body}</p>
               </span>
             </label>

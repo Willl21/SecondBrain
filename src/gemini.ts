@@ -10,20 +10,25 @@ async function call(key: string, model: string, method: string, body: unknown): 
   });
 }
 
-export async function embed(
-  key: string,
-  model: string,
-  text: string,
-  taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY",
-): Promise<number[]> {
-  const res = await call(key, model, "embedContent", {
-    content: { parts: [{ text }] },
-    taskType,
-    outputDimensionality: DIMS,
+type TaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
+
+export async function embed(key: string, model: string, text: string, taskType: TaskType): Promise<number[]> {
+  return (await embedMany(key, model, [text], taskType))[0];
+}
+
+// Banyak teks dalam satu request (batchEmbedContents).
+export async function embedMany(key: string, model: string, texts: string[], taskType: TaskType): Promise<number[][]> {
+  const res = await call(key, model, "batchEmbedContents", {
+    requests: texts.map((text) => ({
+      model: `models/${model}`,
+      content: { parts: [{ text }] },
+      taskType,
+      outputDimensionality: DIMS,
+    })),
   });
   if (!res.ok) throw new Error(`embed ${res.status}: ${await res.text()}`);
-  const data = (await res.json()) as { embedding: { values: number[] } };
-  return data.embedding.values;
+  const data = (await res.json()) as { embeddings: { values: number[] }[] };
+  return data.embeddings.map((e) => e.values);
 }
 
 export type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
