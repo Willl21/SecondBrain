@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>Second Brain</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Brain" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafaf9" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141413" />
+  <style>
+    :root { --bg: #fafaf9; --card: #fff; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --accent: #c2410c; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #141413; --card: #1f1e1d; --fg: #f5f5f4; --muted: #a8a29e; --line: #33312f; --accent: #fb923c; }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.5 system-ui, -apple-system, sans-serif;
+      padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      max-width: 720px; margin-inline: auto; min-height: 100dvh;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 16px; }
+    h2 { font-size: 1rem; margin: 24px 0 8px; color: var(--muted); font-weight: 600; }
+    input, textarea { font: inherit; font-size: 16px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); }
+    textarea { min-height: 140px; resize: vertical; }
+    form { display: grid; gap: 8px; }
+    .row { display: flex; gap: 8px; }
+    button {
+      font: inherit; padding: 10px 16px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600;
+      touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 100ms ease-out, opacity 100ms;
+    }
+    button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+    button:active { transform: scale(0.97); opacity: 0.85; }
+    button:disabled { opacity: 0.5; }
+    @media (hover: hover) and (pointer: fine) { button:hover { opacity: 0.9; } .note:hover { border-color: var(--muted); } }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .answer { white-space: pre-wrap; margin-top: 8px; }
+    .muted { color: var(--muted); font-size: 0.875rem; }
+    .note { display: block; width: 100%; text-align: left; margin-bottom: 8px; cursor: pointer; color: var(--fg); }
+    .note strong { display: block; }
+    .note p { margin: 4px 0 0; color: var(--muted); font-size: 0.875rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <h1>Second Brain</h1>
+
+  <form id="login" hidden>
+    <label for="token">Token akses</label>
+    <input id="token" type="password" autocomplete="current-password" required />
+    <button>Masuk</button>
+  </form>
+
+  <main id="app" hidden>
+    <form id="ask">
+      <label for="q" class="muted">Tanya ke catatan kamu</label>
+      <div class="row">
+        <input id="q" enterkeyhint="send" placeholder="Misal: apa itu RAG?" required />
+        <button>Tanya</button>
+      </div>
+    </form>
+    <div id="answer" class="card answer" hidden aria-live="polite"></div>
+
+    <h2 id="form-title">Catatan baru</h2>
+    <form id="editor">
+      <input id="title" placeholder="Judul" maxlength="200" />
+      <textarea id="body" placeholder="Tulis catatan…" required></textarea>
+      <div class="row">
+        <button id="save">Simpan</button>
+        <button type="button" class="ghost" id="cancel" hidden>Batal</button>
+        <button type="button" class="ghost" id="delete" hidden>Hapus</button>
+      </div>
+      <p id="status" class="muted" aria-live="polite"></p>
+    </form>
+
+    <h2>Catatan <button type="button" class="ghost" id="reindex" hidden>Index ulang</button></h2>
+    <div id="notes"></div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let token = "";
+    try { token = localStorage.getItem("token") || ""; } catch {}
+    let notes = [];
+    let editingId = null;
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, {
+        ...opts,
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { showLogin(); throw new Error("Token salah"); }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+      return data;
+    }
+
+    function showLogin() { $("app").hidden = true; $("login").hidden = false; }
+
+    $("login").onsubmit = async (e) => {
+      e.preventDefault();
+      token = $("token").value;
+      try { localStorage.setItem("token", token); } catch {}
+      $("login").hidden = true; $("app").hidden = false;
+      load();
+    };
+
+    async function load() {
+      notes = await api("/api/notes");
+      const list = $("notes");
+      list.replaceChildren(...notes.map((n) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "card note";
+        const strong = document.createElement("strong");
+        strong.textContent = (n.title || "Tanpa judul") + (n.indexed ? "" : " · belum terindeks");
+        const p = document.createElement("p");
+        p.textContent = n.body;
+        el.append(strong, p);
+        el.onclick = () => edit(n);
+        return el;
+      }));
+      if (!notes.length) list.innerHTML = '<p class="muted">Belum ada catatan.</p>';
+      $("reindex").hidden = !notes.some((n) => !n.indexed);
+    }
+
+    function edit(n) {
+      editingId = n ? n.id : null;
+      $("title").value = n ? n.title : "";
+      $("body").value = n ? n.body : "";
+      $("form-title").textContent = n ? "Edit catatan" : "Catatan baru";
+      $("cancel").hidden = $("delete").hidden = !n;
+      $("delete").textContent = "Hapus";
+      $("status").textContent = "";
+      if (n) $("form-title").scrollIntoView({ behavior: "smooth" });
+    }
+
+    $("editor").onsubmit = async (e) => {
+      e.preventDefault();
+      $("save").disabled = true;
+      try {
+        const payload = JSON.stringify({ title: $("title").value, body: $("body").value });
+        const r = editingId
+          ? await api(`/api/notes/${editingId}`, { method: "PUT", body: payload })
+          : await api("/api/notes", { method: "POST", body: payload });
+        edit(null);
+        $("status").textContent = r.indexed ? "Tersimpan." : "Tersimpan, tapi belum terindeks (limit AI?). Tekan Index ulang nanti.";
+        await load();
+      } catch (err) {
+        $("status").textContent = err.message; // isi form dibiarkan biar tulisan nggak hilang
+      } finally {
+        $("save").disabled = false;
+      }
+    };
+
+    $("cancel").onclick = () => edit(null);
+
+    // Tap pertama minta konfirmasi, tap kedua baru hapus.
+    $("delete").onclick = async () => {
+      if (!editingId) return;
+      if ($("delete").textContent !== "Yakin?") { $("delete").textContent = "Yakin?"; return; }
+      try { await api(`/api/notes/${editingId}`, { method: "DELETE" }); edit(null); await load(); }
+      catch (err) { $("status").textContent = err.message; }
+    };
+
+    $("reindex").onclick = async () => {
+      try {
+        const r = await api("/api/reindex", { method: "POST" });
+        $("status").textContent = `Terindeks ${r.reindexed}, gagal ${r.failed}.`;
+        await load();
+      } catch (err) { $("status").textContent = err.message; }
+    };
+
+    $("ask").onsubmit = async (e) => {
+      e.preventDefault();
+      const box = $("answer");
+      box.hidden = false;
+      box.textContent = "Mikir…";
+      try {
+        const r = await api("/api/ask", { method: "POST", body: JSON.stringify({ q: $("q").value }) });
+        box.textContent = r.answer;
+        if (r.sources.length) {
+          const src = document.createElement("p");
+          src.className = "muted";
+          src.textContent = "Sumber: " + r.sources.map((s) => `#${s.id} ${s.title || "Tanpa judul"}`).join(", ");
+          box.append(src);
+        }
+      } catch (err) {
+        box.textContent = err.message;
+      }
+    };
+
+    token ? (($("app").hidden = false), load().catch(() => {})) : showLogin();
+  </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+	"name": "second-brain",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-01",
+	"workers_dev": true,
+	"preview_urls": false,
+	// Gemini nolak request dari lokasi tertentu (mis. Hong Kong). Kunci Worker di region yang didukung.
+	// ponytail: tiap query D1 jadi lintas benua (+latensi); pindah kalau kerasa lambat.
+	"placement": { "mode": "targeted", "region": "gcp:us-central1" },
+	"assets": {
+		"directory": "./public"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "second-brain",
+			"database_id": "278b2ff4-fc6d-4e84-8f7f-3e1652e9fc85"
+		}
+	],
+	"vectorize": [
+		// Vectorize nggak ada versi lokal, jadi `wrangler dev` pakai index asli di Cloudflare
+		{
+			"binding": "VECTORS",
+			"index_name": "second-brain",
+			"remote": true
+		}
+	],
+	"vars": {
+		// Cek ID persisnya di AI Studio. Urutan = urutan fallback kalau kena 429.
+		"CHAT_MODELS": "gemini-3.5-flash-lite,gemini-3.1-flash-lite",
+		// JANGAN diganti setelah ada catatan; vektor beda model nggak bisa dicampur.
+		"EMBED_MODEL": "gemini-embedding-2"
+	}
+}
