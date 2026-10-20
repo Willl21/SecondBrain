@@ -1,0 +1,32 @@
+:root { --bg: #fafaf9; --card: #fff; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --accent: #c2410c; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #141413; --card: #1f1e1d; --fg: #f5f5f4; --muted: #a8a29e; --line: #33312f; --accent: #fb923c; }
+}
+* { box-sizing: border-box; }
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, sans-serif;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  max-width: 720px; margin-inline: auto; min-height: 100dvh;
+}
+h1 { font-size: 1.4rem; margin: 0 0 16px; }
+h2 { font-size: 1rem; margin: 24px 0 8px; color: var(--muted); font-weight: 600; }
+input, textarea { font: inherit; font-size: 16px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); }
+textarea { min-height: 140px; resize: vertical; }
+form { display: grid; gap: 8px; }
+.row { display: flex; gap: 8px; }
+button {
+  font: inherit; padding: 10px 16px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 100ms ease-out, opacity 100ms;
+}
+button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+button:active { transform: scale(0.97); opacity: 0.85; }
+button:disabled { opacity: 0.5; }
+@media (hover: hover) and (pointer: fine) { button:hover { opacity: 0.9; } .note:hover { border-color: var(--muted); } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.answer { white-space: pre-wrap; margin-top: 8px; }
+.muted { color: var(--muted); font-size: 0.875rem; }
+.note { display: block; width: 100%; text-align: left; margin-bottom: 8px; cursor: pointer; color: var(--fg); }
+.note strong { display: block; }
+.note p { margin: 4px 0 0; color: var(--muted); font-size: 0.875rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

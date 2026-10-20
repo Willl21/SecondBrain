@@ -8,7 +8,7 @@
 	// ponytail: tiap query D1 jadi lintas benua (+latensi); pindah kalau kerasa lambat.
 	"placement": { "mode": "targeted", "region": "gcp:us-central1" },
 	"assets": {
-		"directory": "./public"
+		"directory": "./dist"
 	},
 	"d1_databases": [
 		{

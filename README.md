@@ -2,7 +2,7 @@
 
 Catatan pribadi + tanya jawab AI ke catatan sendiri (RAG). PWA, bisa di-install ke iPhone.
 
-**Stack:** Cloudflare Workers (static assets) · D1 · Vectorize · Gemini API · TypeScript
+**Stack:** React + TypeScript (Vite) · Cloudflare Workers (static assets) · D1 · Vectorize · Gemini API
 
 ## Cara kerja
 1. Catatan disimpan di D1, lalu di-embed (Gemini Embedding) dan vektornya disimpan di Vectorize.
@@ -22,9 +22,10 @@ Isi `.dev.vars` (`GEMINI_API_KEY`, `APP_TOKEN`), lalu cek ID model di `wrangler.
 
 ## Jalanin
 ```bash
-npm run dev      # lokal (Vectorize tetap pakai index asli di Cloudflare)
+npm run dev      # API lokal di :8787 (Vectorize tetap pakai index asli di Cloudflare)
+npm run dev:web  # frontend (Vite) di terminal lain, /api di-proxy ke :8787
 npm test         # test fallback model
-npm run check    # type check
+npm run check    # type check backend + frontend
 ```
 
 ## Deploy

@@ -1,6 +1,5 @@
 import { chat, embed } from "./gemini.ts";
-
-type Note = { id: number; title: string; body: string; indexed: number; updated_at: string };
+import type { Note, Source } from "./types.ts";
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
@@ -101,7 +100,8 @@ export default {
             "Sebut sumber dengan format [#id]. Kalau catatan nggak cukup, bilang terus terang.",
           `Catatan:\n${context || "(tidak ada catatan relevan)"}\n\nPertanyaan: ${q}`,
         );
-        return json({ answer, sources: notes.map((n) => ({ id: n.id, title: n.title })) });
+        const sources: Source[] = notes.map((n) => ({ id: n.id, title: n.title }));
+        return json({ answer, sources });
       }
 
       return json({ error: "not found" }, 404);
